@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f14">
+  <meta name="description" content="Potencia virtual para rodillo CycleOps Fluid 2 con sensor de velocidad Bluetooth.">
+  <title>Potencia Virtual</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- ===== Barra superior: estado del sensor ===== -->
+  <header id="topbar">
+    <div id="sensorPill" class="pill" data-state="disconnected">
+      <span class="dot"></span>
+      <span id="sensorText">Sin sensor</span>
+      <span id="battery" class="battery"></span>
+    </div>
+    <div class="top-actions">
+      <button id="btnConnect" class="btn small">Conectar</button>
+      <button id="btnDemo" class="btn small ghost">Demo</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===== Entrenamiento en vivo ===== -->
+    <section id="view-live" class="view active">
+      <div id="zoneBanner" class="zone-banner">
+        <span id="zoneNum" class="zone-num">Z1</span>
+        <span id="zoneName" class="zone-name">Recuperación</span>
+        <span id="zonePct" class="zone-pct">0 %</span>
+      </div>
+
+      <div class="power-wrap">
+        <div id="power" class="power">0</div>
+        <div class="power-side">
+          <div class="power-unit">W</div>
+          <div id="wkg" class="wkg">0.0 W/kg</div>
+          <div id="powerWindowLabel" class="power-win">prom. 3 s</div>
+        </div>
+      </div>
+
+      <div class="zone-bar">
+        <div id="zoneBarSegs" class="zone-bar-segs"></div>
+        <div id="zoneMarker" class="zone-marker"></div>
+      </div>
+
+      <!-- Panel de entrenamiento estructurado -->
+      <div id="workoutPanel" class="workout-panel hidden">
+        <div class="wp-row">
+          <div class="wp-cell">
+            <div class="lbl">Objetivo</div>
+            <div id="wpTarget" class="wp-big">--</div>
+          </div>
+          <div id="wpComp" class="wp-cell wp-comp">
+            <div class="lbl">Cumplimiento</div>
+            <div id="wpCompText" class="wp-comp-text">--</div>
+          </div>
+          <div class="wp-cell">
+            <div id="wpBlockName" class="lbl">Bloque</div>
+            <div id="wpRemain" class="wp-big">0:00</div>
+          </div>
+        </div>
+        <div class="wp-next">Siguiente: <b id="wpNext">--</b></div>
+        <div id="wpText" class="wp-text hidden"></div>
+        <canvas id="profileCanvas" class="profile-canvas"></canvas>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric"><div class="lbl">Velocidad</div><div class="val"><span id="mSpeed">0.0</span><small id="uSpeed">km/h</small></div></div>
+        <div class="metric"><div class="lbl">Cadencia</div><div class="val"><span id="mCad">--</span><small>rpm</small></div></div>
+        <div class="metric"><div class="lbl">Tiempo</div><div class="val"><span id="mTime">0:00</span></div></div>
+        <div class="metric"><div class="lbl">Distancia</div><div class="val"><span id="mDist">0.00</span><small id="uDist">km</small></div></div>
+        <div class="metric"><div class="lbl">Promedio</div><div class="val"><span id="mAvg">0</span><small>W</small></div></div>
+        <div class="metric"><div class="lbl">Máxima</div><div class="val"><span id="mMax">0</span><small>W</small></div></div>
+        <div class="metric"><div class="lbl">NP</div><div class="val"><span id="mNP">0</span><small>W</small></div></div>
+        <div class="metric"><div class="lbl">IF</div><div class="val"><span id="mIF">0.00</span></div></div>
+        <div class="metric"><div class="lbl">TSS</div><div class="val"><span id="mTSS">0</span></div></div>
+        <div class="metric"><div class="lbl">Trabajo</div><div class="val"><span id="mKJ">0</span><small>kJ</small></div></div>
+      </div>
+
+      <canvas id="liveCanvas" class="live-canvas"></canvas>
+      <div class="chart-caption" id="chartCaption">Últimos 10 min</div>
+
+      <div class="controls">
+        <button id="btnWorkoutPick" class="btn ghost wide">Entrenamiento: <b id="workoutPickName">Libre</b></button>
+        <div class="ctrl-row">
+          <button id="btnStart" class="btn primary big">Iniciar</button>
+          <button id="btnPause" class="btn big hidden">Pausar</button>
+          <button id="btnStop" class="btn danger big hidden">Terminar</button>
+        </div>
+        <div id="statusLine" class="status-line"></div>
+        <button id="btnSimStop" class="btn small ghost hidden">Simular parada 10 s (prueba de autopausa)</button>
+      </div>
+    </section>
+
+    <!-- ===== Biblioteca de entrenamientos ===== -->
+    <section id="view-workouts" class="view">
+      <div class="section-head">
+        <h2>Entrenamientos</h2>
+        <div class="row-gap">
+          <button id="btnNewWorkout" class="btn small">+ Nuevo</button>
+          <button id="btnImport" class="btn small ghost">Importar JSON</button>
+          <input type="file" id="importFile" accept=".json,application/json" hidden>
+        </div>
+      </div>
+      <div class="card test-card">
+        <h3>Test de FTP guiado (20 min)</h3>
+        <p>Calentamiento, activación, 5 min fuertes, recuperación, esfuerzo máximo de 20 min y enfriamiento (~66 min). FTP = 95 % de tu potencia media de los 20 min.</p>
+        <button id="btnFtpTest" class="btn primary">Hacer el test</button>
+      </div>
+      <div id="workoutList"></div>
+    </section>
+
+    <!-- ===== Editor de entrenamientos ===== -->
+    <section id="view-editor" class="view">
+      <div class="section-head">
+        <h2 id="editorTitle">Editar entrenamiento</h2>
+      </div>
+      <label class="field">Nombre<input id="edName" type="text" maxlength="60"></label>
+      <label class="field">Descripción<input id="edDesc" type="text" maxlength="140"></label>
+      <canvas id="edProfile" class="profile-canvas"></canvas>
+      <div class="ed-total">Duración total: <b id="edTotal">0:00</b></div>
+      <div id="edBlocks"></div>
+      <div class="ed-add">
+        <span>Añadir bloque:</span>
+        <button class="btn small" data-add="warmup">Calentamiento</button>
+        <button class="btn small" data-add="steady">Estable</button>
+        <button class="btn small" data-add="intervals">Intervalos</button>
+        <button class="btn small" data-add="cooldown">Enfriamiento</button>
+        <button class="btn small" data-add="free">Libre</button>
+      </div>
+      <p class="hint">Duraciones en minutos (<code>10</code>, <code>0.5</code>) o mm:ss (<code>10:00</code>, <code>0:30</code>). Objetivos en % del FTP.</p>
+      <div class="ctrl-row">
+        <button id="edCancel" class="btn big ghost">Cancelar</button>
+        <button id="edSave" class="btn big primary">Guardar</button>
+      </div>
+    </section>
+
+    <!-- ===== Historial ===== -->
+    <section id="view-history" class="view">
+      <div class="section-head"><h2>Historial</h2></div>
+      <div id="historyList"></div>
+    </section>
+
+    <!-- ===== Detalle de sesión ===== -->
+    <section id="view-session" class="view">
+      <div class="section-head">
+        <button id="sdBack" class="btn small ghost">← Historial</button>
+      </div>
+      <h2 id="sdTitle"></h2>
+      <div id="sdDate" class="muted"></div>
+      <div id="sdSummary" class="metrics-grid"></div>
+      <canvas id="sdChart" class="live-canvas tall"></canvas>
+      <h3>Tiempo en cada zona</h3>
+      <div id="sdZones"></div>
+      <h3>Exportar a Garmin Connect</h3>
+      <div class="export-row">
+        <button id="sdFit" class="btn primary">Descargar .FIT</button>
+        <button id="sdTcx" class="btn">Descargar .TCX</button>
+        <button id="sdShare" class="btn ghost hidden">Compartir .FIT</button>
+      </div>
+      <p class="hint">Sube el archivo en <b>connect.garmin.com → Importar datos</b> (desde el navegador; la app móvil de Garmin Connect no permite importar archivos).</p>
+      <button id="sdDelete" class="btn danger small">Borrar sesión</button>
+    </section>
+
+    <!-- ===== Ajustes ===== -->
+    <section id="view-settings" class="view">
+      <div class="section-head"><h2>Ajustes</h2></div>
+
+      <div class="card">
+        <h3>Atleta</h3>
+        <label class="field">FTP (W)<input id="sFtp" type="number" min="50" max="600" step="1"></label>
+        <label class="field">Peso (kg)<input id="sWeight" type="number" min="30" max="200" step="0.1"></label>
+        <h4>Historial de FTP</h4>
+        <div id="ftpHistory" class="ftp-history"></div>
+      </div>
+
+      <div class="card">
+        <h3>Rueda y rodillo</h3>
+        <label class="field">Circunferencia de la rueda (mm)<input id="sCirc" type="number" min="1000" max="2500" step="1"></label>
+        <p class="hint">700×23c ≈ 2096 mm · 700×25c ≈ 2105 mm · 700×28c ≈ 2136 mm</p>
+        <label class="field">Coeficiente a (·v)<input id="sA" type="number" step="0.0001"></label>
+        <label class="field">Coeficiente b (·v³)<input id="sB" type="number" step="0.0001"></label>
+        <label class="field">Calibración: <b id="sCalVal">0 %</b><input id="sCal" type="range" min="-20" max="20" step="1"></label>
+        <p class="hint">P = (a·v + b·v³) × (1 + calibración). v en mph. Fluid 2: a = 8.9064, b = 0.0098.</p>
+        <p class="formula" id="sCurvePreview"></p>
+        <button id="sCurveReset" class="btn small ghost">Restaurar curva Fluid 2</button>
+      </div>
+
+      <div class="card">
+        <h3>Pantalla</h3>
+        <label class="field">Promedio de potencia
+          <select id="sAvg"><option value="1">1 s</option><option value="3">3 s</option><option value="5">5 s</option></select>
+        </label>
+        <label class="field">Gráfico en vivo
+          <select id="sChartMin"><option value="5">Últimos 5 min</option><option value="10">Últimos 10 min</option></select>
+        </label>
+        <label class="field">Unidades
+          <select id="sUnits"><option value="kmh">km/h y km</option><option value="mph">mph y millas</option></select>
+        </label>
+        <label class="check"><input id="sAutopause" type="checkbox"> Autopausa cuando la velocidad es 0</label>
+        <label class="check"><input id="sSound" type="checkbox"> Sonido</label>
+        <label class="check"><input id="sVibration" type="checkbox"> Vibración</label>
+        <label class="check"><input id="sWarmup" type="checkbox"> Mostrar aviso de calentamiento al iniciar</label>
+      </div>
+
+      <div class="card">
+        <h3>Zonas de potencia</h3>
+        <label class="field">Tipo de zonas
+          <select id="sZoneType"><option value="zwift">6 zonas (Zwift)</option><option value="coggan">7 zonas (Coggan)</option></select>
+        </label>
+        <table class="zone-table">
+          <thead><tr><th>Zona</th><th>Nombre</th><th>Desde %</th><th>Color</th></tr></thead>
+          <tbody id="zoneRows"></tbody>
+        </table>
+        <div id="zoneError" class="error hidden">Los límites deben ser crecientes y la Z1 debe empezar en 0 %.</div>
+        <button id="sZonesReset" class="btn small ghost">Restaurar zonas</button>
+      </div>
+
+      <div class="card">
+        <h3>Sensor</h3>
+        <p id="sSensorInfo" class="muted">Ningún sensor guardado.</p>
+        <button id="sForget" class="btn small ghost">Olvidar sensor</button>
+      </div>
+
+      <p class="muted center">Potencia Virtual v1.0 · Datos guardados solo en este teléfono.</p>
+    </section>
+  </main>
+
+  <!-- ===== Barra de pestañas ===== -->
+  <nav id="tabbar">
+    <button data-view="live" class="active">
+      <svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>Entrenar</button>
+    <button data-view="workouts">
+      <svg viewBox="0 0 24 24"><path d="M3 20V12h3v8zm5 0V6h3v14zm5 0v-9h3v9zm5 0V3h3v17z"/></svg>Entrenos</button>
+    <button data-view="history">
+      <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7zm-1 4v6l5 3 1-1.6-4-2.4V7z"/></svg>Historial</button>
+    <button data-view="settings">
+      <svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7 7 0 0 0-1.7-1L15 3h-4l-.4 2.9a7 7 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7 7 0 0 0 1.7 1L11 21h4l.4-2.9a7 7 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>Ajustes</button>
+  </nav>
+
+  <!-- ===== Modal y avisos ===== -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div id="modalBody"></div>
+      <div id="modalActions" class="modal-actions"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
